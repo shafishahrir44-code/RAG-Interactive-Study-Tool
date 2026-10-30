@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DocTutor</title>
+  <meta name="description" content="Study any PDF one grounded question at a time.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="DocTutor home">DocTutor</a>
+    <div id="session-bar" class="session-bar" hidden></div>
+  </header>
+  <div id="notice" class="notice" role="status" hidden></div>
+  <main id="app" class="app" aria-live="polite"></main>
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

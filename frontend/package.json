@@ -1,0 +1,12 @@
+{
+  "name": "doctutor-frontend",
+  "private": true,
+  "type": "module",
+  "description": "Static, build-free frontend for DocTutor. Dependencies are for tests only.",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
+  "devDependencies": {
+    "jsdom": "^26.1.0"
+  }
+}
