@@ -19,6 +19,17 @@ STOPWORDS = frozenset(
     """.split()
 )
 
+# Everyday verbs and filler adjectives: fine for retrieval, but poor quiz terms and topic labels.
+GENERIC_WORDS = frozenset(
+    """
+    keeps keep holds hold provides provide stores store contains contain makes make gives give takes take
+    uses runs moves returns becomes allows allow means mean called calls gets get goes puts sets shows
+    describes described includes include provides needs need lets helps refers known based following
+    several various certain another different same similar given simple main common important usually
+    always often never instead whether while within without other others either each every
+    """.split()
+)
+
 _TOKEN_RE = re.compile(r"[a-z0-9]+(?:[-'][a-z0-9]+)*")
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z0-9\"'(\[])")
 _WHITESPACE_RE = re.compile(r"[ \t ]+")

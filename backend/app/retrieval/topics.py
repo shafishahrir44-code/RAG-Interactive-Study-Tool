@@ -13,7 +13,7 @@ import numpy as np
 from pydantic import BaseModel
 
 from app.ingestion.models import Chunk
-from app.text_utils import content_tokens
+from app.text_utils import GENERIC_WORDS, content_tokens
 
 MAX_TOPICS = 8
 CHUNKS_PER_TOPIC = 2  # target average cluster size for small documents
@@ -67,12 +67,23 @@ def kmeans(vectors: np.ndarray, k: int, seed: int = 0) -> np.ndarray:
     return labels
 
 
-def _keywords(cluster_chunks: list[Chunk], doc_freq: Counter[str], total_chunks: int) -> list[str]:
+def _label_terms(text: str) -> list[str]:
+    return [
+        t for t in content_tokens(text) if not t.isdigit() and len(t) > 2 and "'" not in t and t not in GENERIC_WORDS
+    ]
+
+
+def _keywords(
+    cluster_chunks: list[Chunk], doc_freq: Counter[str], doc_counts: Counter[str], total_chunks: int
+) -> list[str]:
+    """Terms that are frequent in this cluster and comparatively rare elsewhere in the document."""
     term_counts: Counter[str] = Counter()
     for chunk in cluster_chunks:
-        term_counts.update(t for t in content_tokens(chunk.text) if not t.isdigit() and len(t) > 2)
+        term_counts.update(_label_terms(chunk.text))
     scored = {
-        term: count * math.log(1 + total_chunks / doc_freq[term]) for term, count in term_counts.items()
+        term: count * math.log(1 + total_chunks / doc_freq[term]) * (count / doc_counts[term])
+        for term, count in term_counts.items()
+        if count > 1 or len(term_counts) < LABEL_KEYWORDS * 2  # one-off words make poor labels
     }
     chosen: list[str] = []
     for term, _ in sorted(scored.items(), key=lambda kv: (-kv[1], kv[0])):
@@ -90,8 +101,11 @@ def build_topics(chunks: list[Chunk], vectors: np.ndarray) -> tuple[list[Topic],
     labels = kmeans(np.asarray(vectors, dtype=np.float32), choose_topic_count(len(chunks)))
 
     doc_freq: Counter[str] = Counter()
+    doc_counts: Counter[str] = Counter()
     for chunk in chunks:
-        doc_freq.update(set(content_tokens(chunk.text)))
+        terms = _label_terms(chunk.text)
+        doc_freq.update(set(terms))
+        doc_counts.update(terms)
 
     groups: dict[int, list[Chunk]] = {}
     for chunk, label in zip(chunks, labels):
@@ -102,7 +116,7 @@ def build_topics(chunks: list[Chunk], vectors: np.ndarray) -> tuple[list[Topic],
     topics: list[Topic] = []
     topic_of: dict[str, int] = {}
     for topic_id, members in enumerate(ordered_groups):
-        keywords = _keywords(members, doc_freq, len(chunks)) or [f"section {topic_id + 1}"]
+        keywords = _keywords(members, doc_freq, doc_counts, len(chunks)) or [f"section {topic_id + 1}"]
         topics.append(
             Topic(
                 topic_id=topic_id,

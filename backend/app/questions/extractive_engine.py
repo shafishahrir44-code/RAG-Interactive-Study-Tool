@@ -16,7 +16,7 @@ from app.errors import InsufficientContextError
 from app.ingestion.models import Chunk
 from app.questions.engine import GenerationRequest, build_question
 from app.questions.models import BLANK, Difficulty, Question, QuestionType
-from app.text_utils import STOPWORDS, normalize_answer, split_statements, tokenize
+from app.text_utils import GENERIC_WORDS, STOPWORDS, normalize_answer, split_statements, tokenize
 
 ENGINE_NAME = "extractive"
 SENTENCE_WORDS = (6, 45)  # slide bullets are often short statements
@@ -49,7 +49,7 @@ def _candidate_terms(text: str) -> list[str]:
     seen: dict[str, str] = {}
     for word in _WORD_RE.findall(text):
         key = word.lower()
-        if len(key) >= MIN_TERM_CHARS and key not in STOPWORDS and key not in seen:
+        if len(key) >= MIN_TERM_CHARS and key not in STOPWORDS and key not in GENERIC_WORDS and key not in seen:
             seen[key] = word
     return list(seen.values())
 
@@ -92,7 +92,9 @@ class ExtractiveQuestionEngine:
             words = len(sentence.split())
             if not SENTENCE_WORDS[0] <= words <= SENTENCE_WORDS[1]:
                 continue
-            terms = _candidate_terms(sentence)
+            first_word = sentence.split()[0].strip("\"'(“")
+            # Blanking the first word gives the question away by its capital letter and position.
+            terms = [t for t in _candidate_terms(sentence) if t != first_word]
             if not terms:
                 continue
             clozes.append(Cloze(sentence, self._pick_term(terms, frequency, request.difficulty), request.seed))
@@ -126,6 +128,7 @@ class ExtractiveQuestionEngine:
         def plausibility(term: str) -> tuple:
             lowered = term.lower()
             return (
+                term[:1].isupper() != cloze.term[:1].isupper(),  # "Systems" is a poor rival for "process"
                 lowered.endswith("s") != answer.endswith("s"),  # plural matches plural
                 lowered[-2:] != answer[-2:],  # same ending reads as the same kind of word
                 -min(context_tokens.count(lowered), SALIENCE_CAP),  # repeated terms are key concepts
